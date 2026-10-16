@@ -6,7 +6,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import cl.duoc.mpazpro.ui.screen.InicioScreen
+import cl.duoc.mpazpro.ui.screen.LoginScreen
 import cl.duoc.mpazpro.viewmodel.MainViewModel
+
 
 @Composable
 fun AppNavigation(
@@ -32,6 +34,10 @@ fun AppNavigation(
     ) {
         composable(Screen.Inicio.route) {
             InicioScreen(mainViewModel = mainViewModel)
+        }
+
+        composable(Screen.Login.route) {
+            LoginScreen(mainViewModel)
         }
 
         composable(Screen.Evaluacion.route) {

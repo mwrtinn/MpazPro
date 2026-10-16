@@ -1,6 +1,5 @@
 package cl.duoc.mpazpro.ui.screen
 
-import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -22,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import cl.duoc.mpazpro.R
 import cl.duoc.mpazpro.navigation.Screen
@@ -137,7 +135,7 @@ fun InicioScreen(
                     }
 
                     OutlinedButton(
-                        onClick = { mainViewModel.navegarA(Screen.PerfilEstudiante) },
+                        onClick = { mainViewModel.navegarA(Screen.Login) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(64.dp)
@@ -171,9 +169,3 @@ fun InicioScreen(
     }
 }
 
-@SuppressLint("ViewModelConstructorInComposable")
-@Preview(showBackground = true)
-@Composable
-fun InicioScreenPreview() {
-    InicioScreen(mainViewModel = MainViewModel())
-}
