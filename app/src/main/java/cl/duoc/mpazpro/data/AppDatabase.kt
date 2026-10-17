@@ -6,11 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import cl.duoc.mpazpro.data.dao.DocenteDao
 import cl.duoc.mpazpro.data.entity.DocenteEntity
+import cl.duoc.mpazpro.data.dao.EstudianteDao
+import cl.duoc.mpazpro.data.entity.EstudianteEntity
 
-@Database(entities = [DocenteEntity::class], version = 1, exportSchema = false)
+@Database(entities = [DocenteEntity::class, EstudianteEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun docenteDao(): DocenteDao
+    abstract fun estudianteDao(): EstudianteDao
 
     companion object {
         @Volatile
@@ -22,7 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "mpazpro_database"
-                ).build()
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }
