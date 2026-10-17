@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import cl.duoc.mpazpro.data.AppDatabase
 import cl.duoc.mpazpro.data.entity.DocenteEntity
+import cl.duoc.mpazpro.data.entity.EstudianteEntity
 import cl.duoc.mpazpro.navigation.NavigationEvent
 import cl.duoc.mpazpro.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -14,16 +15,21 @@ import kotlinx.coroutines.launch
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).docenteDao()
+    private val estudianteDao = AppDatabase.getDatabase(application).estudianteDao()
 
     init {
         inicializarDocentes()
+        inicializarEstudiantes()
     }
+
+
+    //LOGIN DOCENTE
 
     fun validarLogin(usuarioInput: String, contrasenaInput: String, onResultado: (Boolean) -> Unit) {
         viewModelScope.launch {
             val docente = dao.login(usuarioInput, contrasenaInput)
             if (docente != null) {
-                _navigationEvent.emit(NavigationEvent.NavegarA(Screen.Inicio)) // O la pantalla que corresponda
+                _navigationEvent.emit(NavigationEvent.NavegarA(Screen.Inicio))
                 onResultado(true)
             } else {
                 onResultado(false)
@@ -44,6 +50,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    //LOGIN ALUMNO
+    fun validarLoginEstudiante(rutInput: String, contrasenaInput: String, onResultado: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val estudiante = estudianteDao.login(rutInput, contrasenaInput)
+            if (estudiante != null) {
+                _navigationEvent.emit(NavigationEvent.NavegarA(Screen.Evaluacion))
+                onResultado(true)
+            } else {
+                onResultado(false)
+            }
+        }
+    }
+
+    private fun inicializarEstudiantes() {
+        viewModelScope.launch {
+            val cantidad = estudianteDao.contarEstudiantes()
+            if (cantidad == 0) {
+                estudianteDao.insertarEstudiante(
+                    EstudianteEntity(rut = "111111111", contrasena = "1234", nombreCompleto = "Alumno Prueba 1")
+                )
+                estudianteDao.insertarEstudiante(
+                    EstudianteEntity(rut = "222222222", contrasena = "1234", nombreCompleto = "Alumno Prueba 2")
+                )
+            }
+        }
+    }
+
+
+    //NAV
     private val _navigationEvent = MutableSharedFlow<NavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
 

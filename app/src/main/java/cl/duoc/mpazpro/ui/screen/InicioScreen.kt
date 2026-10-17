@@ -104,7 +104,7 @@ fun InicioScreen(
                     )
 
                     Button(
-                        onClick = { mainViewModel.navegarA(Screen.Evaluacion) },
+                        onClick = { mainViewModel.navegarA(Screen.LoginEstudiante) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(64.dp)
