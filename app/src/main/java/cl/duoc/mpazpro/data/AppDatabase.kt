@@ -8,12 +8,23 @@ import cl.duoc.mpazpro.data.dao.DocenteDao
 import cl.duoc.mpazpro.data.entity.DocenteEntity
 import cl.duoc.mpazpro.data.dao.EstudianteDao
 import cl.duoc.mpazpro.data.entity.EstudianteEntity
+import cl.duoc.mpazpro.data.dao.RegistroActividadDao
+import cl.duoc.mpazpro.data.entity.RegistroActividadEntity
 
-@Database(entities = [DocenteEntity::class, EstudianteEntity::class], version = 2, exportSchema = false)
+@Database(
+    entities = [
+        DocenteEntity::class,
+        EstudianteEntity::class,
+        RegistroActividadEntity::class
+    ],
+    version = 3,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun docenteDao(): DocenteDao
     abstract fun estudianteDao(): EstudianteDao
+    abstract fun registroActividadDao(): RegistroActividadDao
 
     companion object {
         @Volatile
