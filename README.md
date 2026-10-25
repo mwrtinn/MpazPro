@@ -23,32 +23,41 @@ El proyecto sigue una arquitectura MVVM limpia, escalable y modularizada según 
 ```text
 cl.duoc.mpazpro/
 │
-├── data/                 # Capa de base de datos local (Room)
-│   ├── AppDatabase.kt    # Configuración principal de la base de datos (v2)
-│   ├── dao/              # Consultas e inserciones a la BD (Data Access Object)
+├── data/                    # Capa de base de datos local (Room)
+│   ├── AppDatabase.kt       # Configuración principal de la base de datos (v4)
+│   ├── dao/                 # Consultas e inserciones a la BD (Data Access Object)
+│   │   ├── DesafioDao.kt
 │   │   ├── DocenteDao.kt
-│   │   └── EstudianteDao.kt
-│   └── entity/           # Tablas de la base de datos
+│   │   ├── EstudianteDao.kt
+│   │   └── RegistroActividadDao.kt
+│   └── entity/              # Tablas de la base de datos
+│       ├── DesafioEntity.kt
 │       ├── DocenteEntity.kt
-│       └── EstudianteEntity.kt
+│       ├── EstudianteEntity.kt
+│       └── RegistroActividadEntity.kt
 │
-├── navigation/           # Lógica y rutas de navegación
-│   ├── AppNavigation.kt  # Gestor (NavHost) de navegación principal
-│   ├── NavigationEvent.kt# Eventos de estado para la navegación
-│   └── Screen.kt         # Definición de rutas (Inicio, Login, LoginEstudiante)
+├── navigation/              # Lógica y rutas de navegación
+│   ├── AppNavigation.kt     # Gestor (NavHost) de navegación principal
+│   ├── NavigationEvent.kt   # Eventos de estado para la navegación
+│   └── Screen.kt            # Definición de rutas (Inicio, Login, Perfiles)
 │
-├── ui/                   # Interfaz de usuario (Jetpack Compose)
-│   ├── components/       # Componentes visuales reutilizables (Botones, Tarjetas, etc.)
-│   ├── screen/           # Interfaces visuales completas
+├── ui/                      # Interfaz de usuario (Jetpack Compose)
+│   ├── components/          # Componentes visuales reutilizables (Botones, Tarjetas, etc.)
+│   ├── screen/              # Interfaces visuales completas
+│   │   ├── AlumnoScreen.kt          # Vista y portal del estudiante
+│   │   ├── DocenteScreen.kt         # Vista y panel de control del docente
 │   │   ├── InicioScreen.kt          # Pantalla principal de selección de perfil
-│   │   ├── LoginScreen.kt           # Pantalla de acceso formal para Docente/UTP
-│   │   └── LoginEstudianteScreen.kt # Pantalla de acceso interactivo/amigable para el alumno
-│   └── theme/            # Configuración visual global
-│       ├── Color.kt      # Paleta de colores de la app (AzulPrincipal, GrisTexto, etc.)
-│       ├── Theme.kt      # Tema principal (Modo claro/oscuro de Material 3)
-│       └── Type.kt       # Tipografías y estilos de texto
+│   │   ├── LoginScreen.kt           # Pantalla de acceso formal para Docentes
+│   │   └── LoginEstudianteScreen.kt # Pantalla de acceso amigable para el alumno
+│   └── theme/               # Configuración visual global
+│       ├── Color.kt         # Paleta de colores de la app (Material 3)
+│       ├── Theme.kt         # Tema principal (Modo claro/oscuro)
+│       └── Type.kt          # Tipografías y estilos de texto
 │
-├── viewmodel/            # Controladores de la lógica de negocio
-│   └── MainViewModel.kt  # Gestión de estados, datos de prueba e inicio de sesión
+├── viewmodel/               # Controladores de la lógica de negocio y arquitectura MVVM
+│   ├── AlumnoViewModel.kt   # Gestión de datos y estados para el estudiante
+│   ├── DocenteViewModel.kt  # Gestión de datos y estados para el docente
+│   ├── MainViewModel.kt     # Gestión de accesos, datos de prueba y sesión global
+│   └── ViewModelFactory.kt  # Fábrica centralizada para inyección de dependencias DAO
 │
-└── MainActivity.kt       # Punto de entrada de la aplicación
+└── MainActivity.kt          # Punto de entrada de la aplicación y configuración de vistas
