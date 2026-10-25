@@ -2,37 +2,39 @@ package cl.duoc.mpazpro.ui.screen
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import cl.duoc.mpazpro.data.dao.RegistroActividadDao
-import cl.duoc.mpazpro.data.entity.RegistroActividadEntity
+import cl.duoc.mpazpro.viewmodel.AlumnoViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlumnoScreen(
     rutAlumno: String,
-    registroDao: RegistroActividadDao,
+    viewModel: AlumnoViewModel,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
-    val registros by registroDao.getRegistrosPorAlumno(rutAlumno).collectAsState(initial = emptyList())
+    val desafios by viewModel.desafios.collectAsState()
+
+    LaunchedEffect(rutAlumno) {
+        viewModel.cargarDesafiosAlumno(rutAlumno)
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Portal Alumno") },
+                title = { Text("Portal Alumno - Marcela Paz") },
                 actions = {
                     IconButton(onClick = onLogout) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar Sesión")
@@ -48,74 +50,60 @@ fun AlumnoScreen(
                 .padding(16.dp)
         ) {
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Escuela Marcela Paz", style = MaterialTheme.typography.titleMedium)
+                    Text("Desafíos Interactivos", style = MaterialTheme.typography.titleMedium)
                     Text("Estudiante RUT: $rutAlumno", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            Text("Mis Anotaciones y Asistencias", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (registros.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No registras observaciones o asistencias ingresadas.")
+            if (desafios.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("No tienes desafíos interactivos asignados.")
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(registros, key = { it.id }) { item ->
+                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(desafios, key = { it.id }) { desafio ->
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .animateContentSize(),
+                            modifier = Modifier.fillMaxWidth().animateContentSize(),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(item.asignatura, style = MaterialTheme.typography.titleSmall)
-                                    Text(item.fecha, style = MaterialTheme.typography.bodySmall)
-                                }
+                                Text(desafio.titulo, style = MaterialTheme.typography.titleSmall)
+                                Text(desafio.descripcion, style = MaterialTheme.typography.bodyMedium)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Estado: ${item.estado}", style = MaterialTheme.typography.bodyMedium)
-                                Text("Detalle: ${item.observacion}", style = MaterialTheme.typography.bodySmall)
+                                Text("Intentos: ${desafio.intentosRealizados} / ${desafio.limiteIntentos}")
+                                Text("Puntaje: ${desafio.puntajeObtenido} / ${desafio.puntajeMaximo}")
+                                if (desafio.informePedagogico.isNotBlank()) {
+                                    Text("Informe Docente: ${desafio.informePedagogico}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Button(
+                                    onClick = { viewModel.realizarIntento(desafio, (50..100).random()) },
+                                    enabled = desafio.intentosRealizados < desafio.limiteIntentos,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                ) {
+                                    Text("Resolver Desafío")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Recurso Nativo: Enviar Correo a Docente / Escuela
             Button(
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:contacto@marcelapaz.cl")
-                        putExtra(Intent.EXTRA_SUBJECT, "Consulta Alumno RUT $rutAlumno")
                     }
                     context.startActivity(intent)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
                 Icon(Icons.Default.Email, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Contactar Soporte Estudiantil")
+                Text("Contactar Soporte")
             }
         }
     }

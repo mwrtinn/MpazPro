@@ -9,16 +9,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import cl.duoc.mpazpro.data.AppDatabase
 import cl.duoc.mpazpro.navigation.AppNavigation
 import cl.duoc.mpazpro.ui.theme.MpazProTheme
 import cl.duoc.mpazpro.viewmodel.MainViewModel
+import cl.duoc.mpazpro.viewmodel.ViewModelFactory
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : ComponentActivity() {
 
-    private val mainViewModel: MainViewModel by viewModels()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Obtenemos la base de datos y los DAOs para pasárselos al MainViewModel
+        val database = AppDatabase.getDatabase(this)
+
+        val mainViewModel: MainViewModel by viewModels {
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return MainViewModel(database.docenteDao(), database.estudianteDao()) as T
+                }
+            }
+        }
+
         setContent {
             MpazProTheme {
                 Surface(
@@ -26,10 +40,12 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    val factory = ViewModelFactory(database.desafioDao())
 
                     AppNavigation(
                         navController = navController,
-                        mainViewModel = mainViewModel
+                        mainViewModel = mainViewModel,
+                        factory = factory
                     )
                 }
             }

@@ -1,72 +1,46 @@
 package cl.duoc.mpazpro.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.duoc.mpazpro.data.AppDatabase
+import cl.duoc.mpazpro.data.dao.DocenteDao
+import cl.duoc.mpazpro.data.dao.EstudianteDao
 import cl.duoc.mpazpro.data.entity.DocenteEntity
 import cl.duoc.mpazpro.data.entity.EstudianteEntity
-import cl.duoc.mpazpro.navigation.NavigationEvent
-import cl.duoc.mpazpro.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+sealed class MainNavigationEvent {
+    data class NavegarAStudent(val rut: String) : MainNavigationEvent()
+    data class NavegarADocente(val rut: String) : MainNavigationEvent()
+    object ErrorLogin : MainNavigationEvent()
+}
 
-    private val dao = AppDatabase.getDatabase(application).docenteDao()
-    private val estudianteDao = AppDatabase.getDatabase(application).estudianteDao()
+class MainViewModel(
+    private val docenteDao: DocenteDao,
+    private val estudianteDao: EstudianteDao
+) : ViewModel() {
+
+    private val _navigationEvent = MutableSharedFlow<MainNavigationEvent>()
+    val navigationEvent: SharedFlow<MainNavigationEvent> = _navigationEvent.asSharedFlow()
 
     init {
-        inicializarDocentes()
-        inicializarEstudiantes()
+        inicializarDatosBase()
     }
 
-
-    //LOGIN DOCENTE
-
-    fun validarLogin(usuarioInput: String, contrasenaInput: String, onResultado: (Boolean) -> Unit) {
+    private fun inicializarDatosBase() {
         viewModelScope.launch {
-            val docente = dao.login(usuarioInput, contrasenaInput)
-            if (docente != null) {
-                _navigationEvent.emit(NavigationEvent.NavegarA(Screen.Inicio))
-                onResultado(true)
-            } else {
-                onResultado(false)
-            }
-        }
-    }
-    private fun inicializarDocentes() {
-        viewModelScope.launch {
-            val cantidad = dao.contarDocentes()
-            if (cantidad == 0) {
-                dao.insertarDocente(
+            if (docenteDao.contarDocentes() == 0) {
+                docenteDao.insertarDocente(
                     DocenteEntity(usuario = "profe1", contrasena = "1234", nombreCompleto = "Profesor Juan Pérez")
                 )
-                dao.insertarDocente(
+                docenteDao.insertarDocente(
                     DocenteEntity(usuario = "profe2", contrasena = "4321", nombreCompleto = "Profesora María Gómez")
                 )
             }
-        }
-    }
 
-    //LOGIN ALUMNO
-    fun validarLoginEstudiante(rutInput: String, contrasenaInput: String, onResultado: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            val estudiante = estudianteDao.login(rutInput, contrasenaInput)
-            if (estudiante != null) {
-                _navigationEvent.emit(NavigationEvent.NavegarA(Screen.Evaluacion))
-                onResultado(true)
-            } else {
-                onResultado(false)
-            }
-        }
-    }
-
-    private fun inicializarEstudiantes() {
-        viewModelScope.launch {
-            val cantidad = estudianteDao.contarEstudiantes()
-            if (cantidad == 0) {
+            if (estudianteDao.contarEstudiantes() == 0) {
                 estudianteDao.insertarEstudiante(
                     EstudianteEntity(rut = "111111111", contrasena = "1234", nombreCompleto = "Alumno Prueba 1")
                 )
@@ -77,20 +51,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
-    //NAV
-    private val _navigationEvent = MutableSharedFlow<NavigationEvent>()
-    val navigationEvent = _navigationEvent.asSharedFlow()
-
-    fun navegarA(destino: Screen) {
+    fun validarLoginDocente(usuarioInput: String, contrasenaInput: String, onResultado: (Boolean) -> Unit) {
         viewModelScope.launch {
-            _navigationEvent.emit(NavigationEvent.NavegarA(destino))
+            val docente = docenteDao.login(usuarioInput, contrasenaInput)
+            if (docente != null) {
+                _navigationEvent.emit(MainNavigationEvent.NavegarADocente(docente.usuario))
+                onResultado(true)
+            } else {
+                _navigationEvent.emit(MainNavigationEvent.ErrorLogin)
+                onResultado(false)
+            }
         }
     }
 
-    fun volverAtras() {
+    fun validarLoginEstudiante(rutInput: String, contrasenaInput: String, onResultado: (Boolean) -> Unit) {
         viewModelScope.launch {
-            _navigationEvent.emit(NavigationEvent.VolverAtras)
+            val estudiante = estudianteDao.login(rutInput, contrasenaInput)
+            if (estudiante != null) {
+                _navigationEvent.emit(MainNavigationEvent.NavegarAStudent(estudiante.rut))
+                onResultado(true)
+            } else {
+                _navigationEvent.emit(MainNavigationEvent.ErrorLogin)
+                onResultado(false)
+            }
         }
     }
 }

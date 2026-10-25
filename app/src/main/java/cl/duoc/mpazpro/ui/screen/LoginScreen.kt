@@ -9,8 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,12 +20,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import cl.duoc.mpazpro.R
-import cl.duoc.mpazpro.navigation.Screen
-import cl.duoc.mpazpro.viewmodel.MainViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(mainViewModel: MainViewModel) {
+fun LoginScreen(
+    onLoginClick: (String, String) -> Unit
+) {
     var usuario by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -35,7 +32,7 @@ fun LoginScreen(mainViewModel: MainViewModel) {
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = FondoSuperficie
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
@@ -46,93 +43,72 @@ fun LoginScreen(mainViewModel: MainViewModel) {
             verticalArrangement = Arrangement.Center
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logo_escuela),
+                painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo",
-                modifier = Modifier.size(100.dp).padding(bottom = 16.dp)
+                modifier = Modifier.size(100.dp)
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Acceso Docente / UTP",
-                style = MaterialTheme.typography.headlineSmall,
+                text = "Acceso Docentes",
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = AzulPrincipal
+                color = MaterialTheme.colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             OutlinedTextField(
                 value = usuario,
-                onValueChange = {
-                    usuario = it
-                    errorMensaje = ""
-                },
-                label = { Text("Usuario") },
+                onValueChange = { usuario = it },
+                label = { Text("Usuario / RUT Docente") },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = password,
-                onValueChange = {
-                    password = it
-                    errorMensaje = ""
-                },
+                onValueChange = { password = it },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null
-                        )
-                    }
-                },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                shape = RoundedCornerShape(12.dp)
             )
 
             if (errorMensaje.isNotEmpty()) {
                 Text(
                     text = errorMensaje,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp),
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
                     if (usuario.isBlank() || password.isBlank()) {
-                        errorMensaje = "Por favor completa todos los campos"
+                        errorMensaje = "Complete todos los campos"
                     } else {
-                        mainViewModel.validarLogin(usuario, password) { esValido ->
-                            if (!esValido) {
-                                errorMensaje = "Usuario o contraseña incorrectos"
-                            }
-                        }
+                        onLoginClick(usuario, password)
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AzulPrincipal)
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Iniciar Sesión", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            TextButton(onClick = { mainViewModel.navegarA(Screen.Inicio) }) {
-                Text("Volver al Inicio", color = GrisTexto)
+                Text("Ingresar")
             }
         }
     }
 }
-
