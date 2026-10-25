@@ -6,9 +6,9 @@ Proyecto de Desarrollo de Aplicaciones Móviles (DSY1105) - Duoc UC Sede San Ber
 MpazPro es una aplicación móvil desarrollada para la Escuela Marcela Paz. Su objetivo es proporcionar herramientas interactivas para estudiantes de 3° básico y herramientas de gestión para Docentes/UTP. La aplicación integra desafíos matemáticos, validaciones de formularios y captura de evidencias fotográficas, construida bajo estándares modernos de desarrollo Android.
 
 ## Integrantes del Equipo 👥
-- **Martin Faundez**
-- **Joaquin Orellana**
-- **Vicente Vega**
+- **Martin Faundez*
+- **Joaquin Orellana*
+- **Vicente Vega*
 
 ## Tecnologías Utilizadas 🛠️
 - **Lenguaje:** Kotlin
