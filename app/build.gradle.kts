@@ -54,6 +54,9 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
+    // DataStore Preferences (recordar el RUT)
+    implementation("androidx.datastore:datastore-preferences:1.1.0")
+
     // Material Icons
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
