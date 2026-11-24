@@ -1,63 +1,56 @@
 package cl.duoc.mpazpro.viewmodel
 
-import cl.duoc.mpazpro.data.local.entity.ContenidoEntity
-import cl.duoc.mpazpro.data.local.entity.InformeEntity
-import cl.duoc.mpazpro.data.local.entity.ObjetivoEntity
-import cl.duoc.mpazpro.data.local.entity.PreguntaEntity
-import cl.duoc.mpazpro.data.local.entity.UsuarioEntity
-import cl.duoc.mpazpro.data.local.entity.RespuestaEntity
-import cl.duoc.mpazpro.model.ConfigIntentosState
-import cl.duoc.mpazpro.model.ContenidoErrores
-import cl.duoc.mpazpro.model.ContenidoUiState
-import cl.duoc.mpazpro.model.EstadoContenido
-import cl.duoc.mpazpro.model.FilaResultado
-import cl.duoc.mpazpro.model.PreguntaErrores
-import cl.duoc.mpazpro.model.PreguntaUiState
+import cl.duoc.mpazpro.data.local.entity.*
+import cl.duoc.mpazpro.model.*
 import cl.duoc.mpazpro.repository.AulaRemotaRepository
 import cl.duoc.mpazpro.utils.Validaciones
 import cl.duoc.mpazpro.utils.claveInforme
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-// Gestiona el panel docente utilizando los datos de Spring Boot.
+// Gestiona las operaciones del docente mediante Spring Boot.
 class DocenteViewModel(
     private val repository: AulaRemotaRepository
 ) : OperacionRemotaViewModel() {
 
     private val _objetivos =
         MutableStateFlow<List<ObjetivoEntity>>(emptyList())
-
     val objetivos = _objetivos.asStateFlow()
 
     private val _contenidos =
         MutableStateFlow<List<ContenidoEntity>>(emptyList())
-
     val contenidos = _contenidos.asStateFlow()
 
     private val _preguntas =
         MutableStateFlow<List<PreguntaEntity>>(emptyList())
-
     val preguntas = _preguntas.asStateFlow()
 
     private val _filas =
         MutableStateFlow<List<FilaResultado>>(emptyList())
-
     val filas = _filas.asStateFlow()
 
     private var estudiantes = emptyList<UsuarioEntity>()
     private var respuestas = emptyList<RespuestaEntity>()
     private var informes = emptyList<InformeEntity>()
 
-    // Conserva temporalmente las imágenes seleccionadas.
+    // Conserva temporalmente las imágenes locales.
     private val imagenesLocales = mutableMapOf<Int, String>()
+
+    private val _contenidoEditando =
+        MutableStateFlow<Int?>(null)
+    val contenidoEditando = _contenidoEditando.asStateFlow()
+
+    private val _preguntaEditando =
+        MutableStateFlow<Int?>(null)
+    val preguntaEditando = _preguntaEditando.asStateFlow()
+
+    // ---------- Carga de datos ----------
 
     fun recargar() = ejecutar {
         cargarDatos()
     }
 
-    // Consulta ambos microservicios y actualiza el panel.
     private suspend fun cargarDatos() {
 
         val nuevosObjetivos = repository.objetivos()
@@ -70,12 +63,10 @@ class DocenteViewModel(
         _objetivos.value = nuevosObjetivos.sortedBy { it.id }
 
         _contenidos.value = nuevosContenidos.map { contenido ->
-
             contenido.copy(
                 imagenPath = imagenesLocales[contenido.id]
                     ?: contenido.imagenPath
             )
-
         }.sortedBy { it.id }
 
         _preguntas.value = nuevasPreguntas.sortedBy { it.id }
@@ -87,7 +78,6 @@ class DocenteViewModel(
         reconstruirFilas()
     }
 
-    // Relaciona los estudiantes con sus objetivos y resultados.
     private fun reconstruirFilas() {
 
         _filas.value = estudiantes.flatMap { estudiante ->
@@ -112,12 +102,9 @@ class DocenteViewModel(
         }
     }
 
-    private fun actualizarObjetivoLocal(
-        objetivo: ObjetivoEntity
-    ) {
+    private fun actualizarObjetivoLocal(objetivo: ObjetivoEntity) {
 
         _objetivos.update { lista ->
-
             lista.map {
                 if (it.id == objetivo.id) objetivo else it
             }
@@ -126,9 +113,7 @@ class DocenteViewModel(
         reconstruirFilas()
     }
 
-    private fun actualizarInformeLocal(
-        informe: InformeEntity
-    ) {
+    private fun actualizarInformeLocal(informe: InformeEntity) {
 
         informes = informes.filterNot {
             it.clave == informe.clave
@@ -139,11 +124,8 @@ class DocenteViewModel(
 
     // ---------- Objetivos e intentos ----------
 
-    private val _config =
-        MutableStateFlow(ConfigIntentosState())
-
-    val config: StateFlow<ConfigIntentosState> =
-        _config.asStateFlow()
+    private val _config = MutableStateFlow(ConfigIntentosState())
+    val config = _config.asStateFlow()
 
     fun alternarAsignado(
         objetivo: ObjetivoEntity,
@@ -191,10 +173,7 @@ class DocenteViewModel(
 
         if (error != null) {
 
-            _config.update {
-                it.copy(error = error)
-            }
-
+            _config.update { it.copy(error = error) }
             return
         }
 
@@ -214,11 +193,8 @@ class DocenteViewModel(
 
     // ---------- Formulario de contenidos ----------
 
-    private val _contenido =
-        MutableStateFlow(ContenidoUiState())
-
-    val contenido: StateFlow<ContenidoUiState> =
-        _contenido.asStateFlow()
+    private val _contenido = MutableStateFlow(ContenidoUiState())
+    val contenido = _contenido.asStateFlow()
 
     fun onContenidoOaChanged(oaId: Int) = _contenido.update {
 
@@ -240,46 +216,36 @@ class DocenteViewModel(
         )
     }
 
-    fun onExplicacionChanged(
-        explicacion: String
-    ) = _contenido.update {
+    fun onExplicacionChanged(valor: String) = _contenido.update {
 
         it.copy(
-            explicacion = explicacion,
+            explicacion = valor,
             errores = it.errores.copy(
-                explicacion =
-                    Validaciones.validarExplicacion(explicacion)
+                explicacion = Validaciones.validarExplicacion(valor)
             ),
             guardado = false
         )
     }
 
-    fun onEjemploChanged(ejemplo: String) = _contenido.update {
+    fun onEjemploChanged(valor: String) = _contenido.update {
 
         it.copy(
-            ejemplo = ejemplo,
+            ejemplo = valor,
             errores = it.errores.copy(
-                ejemplo = Validaciones.validarEjemplo(ejemplo)
+                ejemplo = Validaciones.validarEjemplo(valor)
             ),
             guardado = false
         )
     }
 
     fun onIconoChanged(icono: String) = _contenido.update {
-
-        it.copy(icono = icono)
+        it.copy(icono = icono, guardado = false)
     }
 
-    // Recibe la imagen seleccionada desde la cámara o galería.
     fun onImagenChanged(ruta: String?) = _contenido.update {
-
-        it.copy(
-            imagenPath = ruta,
-            guardado = false
-        )
+        it.copy(imagenPath = ruta, guardado = false)
     }
 
-    // Valida los campos antes de enviar el contenido.
     fun validarContenido(): Boolean {
 
         val c = _contenido.value
@@ -287,55 +253,90 @@ class DocenteViewModel(
         val errores = ContenidoErrores(
             oa = if (c.oaId == null)
                 "Selecciona un objetivo" else null,
-
             titulo = Validaciones.validarTitulo(c.titulo),
-
-            explicacion =
-                Validaciones.validarExplicacion(c.explicacion),
-
+            explicacion = Validaciones.validarExplicacion(c.explicacion),
             ejemplo = Validaciones.validarEjemplo(c.ejemplo)
         )
 
-        _contenido.update {
-            it.copy(errores = errores)
-        }
+        _contenido.update { it.copy(errores = errores) }
 
         return errores == ContenidoErrores()
     }
 
-    // El contenido queda pendiente de revisión por UTP.
+    // Carga un contenido existente en el formulario.
+    fun editarContenido(c: ContenidoEntity) {
+
+        if (cargando.value) return
+
+        _contenidoEditando.value = c.id
+
+        _contenido.value = ContenidoUiState(
+            oaId = c.oaId,
+            titulo = c.titulo,
+            explicacion = c.explicacion,
+            ejemplo = c.ejemplo,
+            icono = c.icono,
+            imagenPath = c.imagenPath
+        )
+    }
+
+    fun cancelarEdicionContenido() {
+
+        if (cargando.value) return
+
+        val oaId = _contenido.value.oaId
+
+        _contenidoEditando.value = null
+        _contenido.value = ContenidoUiState(oaId = oaId)
+    }
+
+    // Crea o actualiza según el modo del formulario.
     fun crearContenido() {
 
-        if (!validarContenido()) return
+        if (cargando.value || !validarContenido()) return
 
         val c = _contenido.value
         val oaId = c.oaId ?: return
+        val id = _contenidoEditando.value
 
         ejecutar {
 
-            val creado = repository.crearContenido(
-
-                ContenidoEntity(
-                    oaId = oaId,
-                    titulo = c.titulo.trim(),
-                    explicacion = c.explicacion.trim(),
-                    ejemplo = c.ejemplo.trim(),
-                    icono = c.icono,
-                    estado = EstadoContenido.PENDIENTE,
-                    imagenPath = c.imagenPath
-                )
+            val datos = ContenidoEntity(
+                id = id ?: 0,
+                oaId = oaId,
+                titulo = c.titulo.trim(),
+                explicacion = c.explicacion.trim(),
+                ejemplo = c.ejemplo.trim(),
+                icono = c.icono,
+                estado = EstadoContenido.PENDIENTE,
+                observacionUtp = "",
+                imagenPath = c.imagenPath
             )
 
-            c.imagenPath?.let {
-                imagenesLocales[creado.id] = it
+            val guardado = if (id == null) {
+                repository.crearContenido(datos)
+            } else {
+                repository.actualizarContenido(datos)
             }
 
-            _contenidos.update {
+            if (c.imagenPath != null) {
 
-                it + creado.copy(
-                    imagenPath = c.imagenPath
-                )
+                imagenesLocales[guardado.id] = c.imagenPath
+
+            } else {
+
+                imagenesLocales.remove(guardado.id)
             }
+
+            _contenidos.update { lista ->
+
+                (
+                        lista.filterNot { it.id == guardado.id } +
+                                guardado.copy(imagenPath = c.imagenPath)
+                        ).sortedBy { it.id }
+            }
+
+            _contenidoEditando.value = null
 
             _contenido.value = ContenidoUiState(
                 oaId = oaId,
@@ -344,13 +345,31 @@ class DocenteViewModel(
         }
     }
 
+    // Elimina el contenido después de la confirmación.
+    fun eliminarContenido(contenido: ContenidoEntity) {
+
+        ejecutar {
+
+            repository.eliminarContenido(contenido.id)
+
+            imagenesLocales.remove(contenido.id)
+
+            _contenidos.update { lista ->
+                lista.filterNot { it.id == contenido.id }
+            }
+
+            if (_contenidoEditando.value == contenido.id) {
+
+                _contenidoEditando.value = null
+                _contenido.value = ContenidoUiState()
+            }
+        }
+    }
+
     // ---------- Formulario de preguntas ----------
 
-    private val _pregunta =
-        MutableStateFlow(PreguntaUiState())
-
-    val pregunta: StateFlow<PreguntaUiState> =
-        _pregunta.asStateFlow()
+    private val _pregunta = MutableStateFlow(PreguntaUiState())
+    val pregunta = _pregunta.asStateFlow()
 
     fun onPreguntaOaChanged(oaId: Int) = _pregunta.update {
 
@@ -361,15 +380,12 @@ class DocenteViewModel(
         )
     }
 
-    fun onEnunciadoChanged(
-        enunciado: String
-    ) = _pregunta.update {
+    fun onEnunciadoChanged(valor: String) = _pregunta.update {
 
         it.copy(
-            enunciado = enunciado,
+            enunciado = valor,
             errores = it.errores.copy(
-                enunciado =
-                    Validaciones.validarEnunciado(enunciado)
+                enunciado = Validaciones.validarEnunciado(valor)
             ),
             guardado = false
         )
@@ -417,85 +433,117 @@ class DocenteViewModel(
     }
 
     fun onTipoChanged(tipo: String) = _pregunta.update {
-
-        it.copy(tipo = tipo)
+        it.copy(tipo = tipo, guardado = false)
     }
 
     fun onDificultadChanged(nivel: Int) = _pregunta.update {
-
-        it.copy(dificultad = nivel)
+        it.copy(dificultad = nivel, guardado = false)
     }
 
     fun onCorrectaChanged(indice: Int) = _pregunta.update {
-
-        it.copy(correcta = indice)
+        it.copy(correcta = indice, guardado = false)
     }
 
-    // Valida el formulario y evita alternativas repetidas.
     fun validarPregunta(): Boolean {
 
         val p = _pregunta.value
 
         val errores = PreguntaErrores(
-
             oa = if (p.oaId == null)
                 "Selecciona un objetivo" else null,
 
-            enunciado =
-                Validaciones.validarEnunciado(p.enunciado),
+            enunciado = Validaciones.validarEnunciado(p.enunciado),
 
-            opcionA =
-                Validaciones.validarAlternativa(p.opcionA),
+            opcionA = Validaciones.validarAlternativa(p.opcionA),
 
-            opcionB =
-                Validaciones.validarAlternativa(p.opcionB)
-                    ?: Validaciones.alternativaRepetida(
-                        p.opcionB,
-                        listOf(p.opcionA)
-                    ),
+            opcionB = Validaciones.validarAlternativa(p.opcionB)
+                ?: Validaciones.alternativaRepetida(
+                    p.opcionB,
+                    listOf(p.opcionA)
+                ),
 
-            opcionC =
-                Validaciones.validarAlternativa(p.opcionC)
-                    ?: Validaciones.alternativaRepetida(
-                        p.opcionC,
-                        listOf(p.opcionA, p.opcionB)
-                    )
+            opcionC = Validaciones.validarAlternativa(p.opcionC)
+                ?: Validaciones.alternativaRepetida(
+                    p.opcionC,
+                    listOf(p.opcionA, p.opcionB)
+                )
         )
 
-        _pregunta.update {
-            it.copy(errores = errores)
-        }
+        _pregunta.update { it.copy(errores = errores) }
 
         return errores == PreguntaErrores()
     }
 
-    // Registra una nueva pregunta en el microservicio.
+    // Carga una pregunta existente para editarla.
+    fun editarPregunta(p: PreguntaEntity) {
+
+        if (cargando.value) return
+
+        _preguntaEditando.value = p.id
+
+        _pregunta.value = PreguntaUiState(
+            oaId = p.oaId,
+            tipo = p.tipo,
+            dificultad = p.dificultad,
+            enunciado = p.enunciado,
+            opcionA = p.opcionA,
+            opcionB = p.opcionB,
+            opcionC = p.opcionC,
+            correcta = p.correcta
+        )
+    }
+
+    fun cancelarEdicionPregunta() {
+
+        if (cargando.value) return
+
+        val oaId = _pregunta.value.oaId
+
+        _preguntaEditando.value = null
+        _pregunta.value = PreguntaUiState(oaId = oaId)
+    }
+
+    // Crea o actualiza una pregunta en el servidor.
     fun crearPregunta() {
 
-        if (!validarPregunta()) return
+        if (cargando.value || !validarPregunta()) return
 
         val p = _pregunta.value
         val oaId = p.oaId ?: return
+        val id = _preguntaEditando.value
 
         ejecutar {
 
-            val creada = repository.crearPregunta(
-
-                PreguntaEntity(
-                    oaId = oaId,
-                    tipo = p.tipo,
-                    dificultad = p.dificultad,
-                    enunciado = p.enunciado.trim(),
-                    opcionA = p.opcionA.trim(),
-                    opcionB = p.opcionB.trim(),
-                    opcionC = p.opcionC.trim(),
-                    correcta = p.correcta
-                )
+            val datos = PreguntaEntity(
+                id = id ?: 0,
+                oaId = oaId,
+                tipo = p.tipo,
+                dificultad = p.dificultad,
+                enunciado = p.enunciado.trim(),
+                opcionA = p.opcionA.trim(),
+                opcionB = p.opcionB.trim(),
+                opcionC = p.opcionC.trim(),
+                correcta = p.correcta
             )
 
-            _preguntas.update {
-                it + creada
+            val guardada = if (id == null) {
+
+                repository.crearPregunta(datos)
+
+            } else {
+
+                repository.actualizarPregunta(datos)
             }
+
+            _preguntas.update { lista ->
+
+                (
+                        lista.filterNot { it.id == guardada.id } +
+                                guardada
+                        ).sortedBy { it.id }
+            }
+
+            _preguntaEditando.value = null
 
             _pregunta.value = PreguntaUiState(
                 oaId = oaId,
@@ -506,21 +554,33 @@ class DocenteViewModel(
         }
     }
 
-    // Oculta los mensajes de guardado.
+    // El servidor protege las preguntas ya respondidas.
+    fun eliminarPregunta(pregunta: PreguntaEntity) {
+
+        ejecutar {
+
+            repository.eliminarPregunta(pregunta.id)
+
+            _preguntas.update { lista ->
+                lista.filterNot { it.id == pregunta.id }
+            }
+
+            if (_preguntaEditando.value == pregunta.id) {
+
+                _preguntaEditando.value = null
+                _pregunta.value = PreguntaUiState()
+            }
+        }
+    }
+
     fun limpiarMensajes() {
 
-        _contenido.update {
-            it.copy(guardado = false)
-        }
-
-        _pregunta.update {
-            it.copy(guardado = false)
-        }
+        _contenido.update { it.copy(guardado = false) }
+        _pregunta.update { it.copy(guardado = false) }
     }
 
     // ---------- Informes pedagógicos ----------
 
-    // El servidor calcula el rendimiento del estudiante.
     fun generarInforme(fila: FilaResultado) {
 
         ejecutar {
@@ -544,7 +604,6 @@ class DocenteViewModel(
         }
     }
 
-    // Carga los datos al ingresar al panel docente.
     init {
         recargar()
     }
