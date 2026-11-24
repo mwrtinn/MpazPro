@@ -130,6 +130,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Carga de imágenes desde Internet.
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
     // Pruebas.
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
