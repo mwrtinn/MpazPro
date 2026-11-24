@@ -5,16 +5,15 @@ import androidx.lifecycle.ViewModelProvider
 import cl.duoc.mpazpro.data.local.AppDatabase
 import cl.duoc.mpazpro.data.local.PreferenciasDataStore
 import cl.duoc.mpazpro.repository.AulaRepository
+import cl.duoc.mpazpro.repository.AulaRemotaRepository
 
-/**
- * Fábrica central de ViewModels: es el único lugar donde se arman sus dependencias
- * (repositorio y DataStore), por lo que los ViewModels no conocen Room ni el Context.
- */
+// Centraliza las dependencias de los ViewModels.
 class ViewModelFactory(
     database: AppDatabase,
     private val preferencias: PreferenciasDataStore
 ) : ViewModelProvider.Factory {
 
+    // Repositorio local de Room.
     private val repository = AulaRepository(
         usuarios = database.usuarioDao(),
         objetivos = database.objetivoDao(),
@@ -24,16 +23,47 @@ class ViewModelFactory(
         informes = database.informeDao()
     )
 
+    // Repositorio conectado con ambos microservicios.
+    private val repositoryRemoto by lazy {
+        AulaRemotaRepository()
+    }
+
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+    override fun <T : ViewModel> create(
+        modelClass: Class<T>
+    ): T {
+
         val viewModel: ViewModel = when {
-            modelClass.isAssignableFrom(MainViewModel::class.java) -> MainViewModel()
-            modelClass.isAssignableFrom(LoginViewModel::class.java) -> LoginViewModel(repository, preferencias)
-            modelClass.isAssignableFrom(EstudianteViewModel::class.java) -> EstudianteViewModel(repository)
-            modelClass.isAssignableFrom(DocenteViewModel::class.java) -> DocenteViewModel(repository)
-            modelClass.isAssignableFrom(UtpViewModel::class.java) -> UtpViewModel(repository)
-            else -> throw IllegalArgumentException("ViewModel clase desconocida: ${modelClass.name}")
+
+            modelClass.isAssignableFrom(
+                MainViewModel::class.java
+            ) -> MainViewModel()
+
+            modelClass.isAssignableFrom(
+                LoginViewModel::class.java
+            ) -> LoginViewModel(
+                repository,
+                preferencias
+            )
+
+            // El estudiante aún utiliza Room.
+            modelClass.isAssignableFrom(
+                EstudianteViewModel::class.java
+            ) -> EstudianteViewModel(repository)
+
+            modelClass.isAssignableFrom(
+                DocenteViewModel::class.java
+            ) -> DocenteViewModel(repositoryRemoto)
+
+            modelClass.isAssignableFrom(
+                UtpViewModel::class.java
+            ) -> UtpViewModel(repositoryRemoto)
+
+            else -> throw IllegalArgumentException(
+                "ViewModel clase desconocida: ${modelClass.name}"
+            )
         }
+
         return viewModel as T
     }
 }
