@@ -1,15 +1,17 @@
 package cl.duoc.mpazpro.data.remote
 
+import cl.duoc.mpazpro.BuildConfig
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-// Configuración central de las conexiones con los microservicios.
+// Configuración central de los microservicios.
 object RetrofitClient {
 
-    private const val URL_USUARIOS = "http://10.0.2.2:8081/"
-    private const val URL_APRENDIZAJE = "http://10.0.2.2:8082/"
+    // Recupera las direcciones configuradas en Gradle.
+    private val URL_USUARIOS = BuildConfig.URL_USUARIOS
+    private val URL_APRENDIZAJE = BuildConfig.URL_APRENDIZAJE
 
     // Agrega el token JWT a las solicitudes protegidas.
     private val cliente = OkHttpClient.Builder()
