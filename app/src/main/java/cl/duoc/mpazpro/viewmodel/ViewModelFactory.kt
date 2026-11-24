@@ -13,7 +13,7 @@ class ViewModelFactory(
     private val preferencias: PreferenciasDataStore
 ) : ViewModelProvider.Factory {
 
-    // Repositorio local de Room.
+    // Repositorio local y autenticación.
     private val repository = AulaRepository(
         usuarios = database.usuarioDao(),
         objetivos = database.objetivoDao(),
@@ -46,10 +46,9 @@ class ViewModelFactory(
                 preferencias
             )
 
-            // El estudiante aún utiliza Room.
             modelClass.isAssignableFrom(
                 EstudianteViewModel::class.java
-            ) -> EstudianteViewModel(repository)
+            ) -> EstudianteViewModel(repositoryRemoto)
 
             modelClass.isAssignableFrom(
                 DocenteViewModel::class.java

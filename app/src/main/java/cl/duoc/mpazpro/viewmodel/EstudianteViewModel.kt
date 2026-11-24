@@ -1,125 +1,391 @@
 package cl.duoc.mpazpro.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import cl.duoc.mpazpro.data.local.entity.ContenidoEntity
+import cl.duoc.mpazpro.data.local.entity.ObjetivoEntity
+import cl.duoc.mpazpro.data.local.entity.RespuestaEntity
+import cl.duoc.mpazpro.data.remote.SesionRemota
+import cl.duoc.mpazpro.data.remote.aEntidad
 import cl.duoc.mpazpro.model.QuizUiState
 import cl.duoc.mpazpro.model.ResultadoPregunta
-import cl.duoc.mpazpro.data.local.entity.ObjetivoEntity
-import cl.duoc.mpazpro.data.local.entity.PreguntaEntity
-import cl.duoc.mpazpro.data.local.entity.RespuestaEntity
-import cl.duoc.mpazpro.repository.AulaRepository
-import cl.duoc.mpazpro.utils.Evaluador
 import cl.duoc.mpazpro.model.TipoPregunta
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import cl.duoc.mpazpro.repository.AulaRemotaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
-/**
- * ViewModel del perfil estudiante. Las tres pantallas del estudiante (inicio, objetivo y quiz)
- * comparten esta misma instancia, así el estado no se pierde al navegar entre ellas.
- */
-class EstudianteViewModel(private val repository: AulaRepository) : ViewModel() {
+// Gestiona los aprendizajes y evaluaciones desde Spring Boot.
+class EstudianteViewModel(
+    private val repository: AulaRemotaRepository
+) : OperacionRemotaViewModel() {
 
-    private val rutActual = MutableStateFlow("")
-    private val oaActual = MutableStateFlow(0)
+    private val _objetivos =
+        MutableStateFlow<List<ObjetivoEntity>>(emptyList())
 
-    /** Solo los objetivos que el docente asignó. */
-    val objetivos: StateFlow<List<ObjetivoEntity>> = repository.objetivosAsignados()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val objetivos = _objetivos.asStateFlow()
 
-    val respuestas: StateFlow<List<RespuestaEntity>> = rutActual
-        .flatMapLatest { repository.respuestasDeAlumno(it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _respuestas =
+        MutableStateFlow<List<RespuestaEntity>>(emptyList())
 
-    val objetivo: StateFlow<ObjetivoEntity?> = oaActual
-        .flatMapLatest { repository.observarObjetivo(it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val respuestas = _respuestas.asStateFlow()
 
-    /** Solo contenidos aprobados por UTP. */
-    val contenidos: StateFlow<List<ContenidoEntity>> = oaActual
-        .flatMapLatest { repository.contenidosAprobados(it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _objetivo =
+        MutableStateFlow<ObjetivoEntity?>(null)
 
-    private val _quiz = MutableStateFlow(QuizUiState())
-    val quiz: StateFlow<QuizUiState> = _quiz.asStateFlow()
+    val objetivo = _objetivo.asStateFlow()
+
+    private val _contenidos =
+        MutableStateFlow<List<ContenidoEntity>>(emptyList())
+
+    val contenidos = _contenidos.asStateFlow()
+
+    private val _pruebaPendiente =
+        MutableStateFlow(false)
+
+    val pruebaPendiente = _pruebaPendiente.asStateFlow()
+
+    private val _quiz =
+        MutableStateFlow(QuizUiState())
+
+    val quiz = _quiz.asStateFlow()
+
+    // ---------- Inicio del estudiante ----------
 
     fun iniciarSesion(rut: String) {
-        rutActual.value = rut
+
+        ejecutar {
+
+            // Comprueba que la navegación corresponda a la sesión.
+            check(SesionRemota.rut == rut)
+
+            val nuevosObjetivos =
+                repository.objetivosAsignados()
+
+            val nuevasRespuestas =
+                repository.respuestas()
+
+            _objetivos.value =
+                nuevosObjetivos.sortedBy { it.id }
+
+            _respuestas.value = nuevasRespuestas
+        }
     }
+
+    // ---------- Objetivos y contenidos ----------
 
     fun seleccionarObjetivo(id: Int) {
-        oaActual.value = id
+
+        if (cargando.value) return
+
+        _objetivo.value = null
+        _contenidos.value = emptyList()
+        _pruebaPendiente.value = false
+
+        ejecutar {
+
+            val oa = repository.buscarObjetivo(id)
+
+            val material =
+                repository.contenidosAprobados(id)
+
+            val historial =
+                repository.respuestas()
+
+            val preguntasPrueba = repository.preguntasDe(
+                id,
+                TipoPregunta.PRUEBA
+            )
+
+            val ultimo = historial
+                .filter {
+                    it.oaId == id &&
+                            it.tipo == TipoPregunta.PRUEBA
+                }
+                .maxOfOrNull { it.intento } ?: 0
+
+            val respondidas = historial.filter {
+
+                it.oaId == id &&
+                        it.tipo == TipoPregunta.PRUEBA &&
+                        it.intento == ultimo
+
+            }.map { it.preguntaId }.toSet()
+
+            // Detecta si todavía hay preguntas de un intento activo.
+            _pruebaPendiente.value =
+                ultimo > 0 &&
+                        ultimo <= oa.intentosPrueba &&
+                        preguntasPrueba.any {
+                            it.id !in respondidas
+                        }
+
+            _objetivo.value = oa
+            _contenidos.value = material
+            _respuestas.value = historial
+        }
     }
 
-    fun iniciarQuiz(oaId: Int, tipo: String) {
-        viewModelScope.launch {
-            _quiz.value = QuizUiState(cargando = true, tipo = tipo)
-            val oa = repository.observarObjetivo(oaId).first()
-            val lista = repository.preguntasDe(oaId, tipo)
-            val usados = repository.ultimoIntento(rutActual.value, oaId, tipo)
-            val titulo = if (tipo == TipoPregunta.PRUEBA) "Prueba final" else "Desafíos"
+    // ---------- Inicio de evaluaciones ----------
 
-            _quiz.value = when {
-                oa == null || !oa.asignado ->
-                    QuizUiState(cargando = false, tipo = tipo, titulo = titulo, bloqueadoMensaje = "Este objetivo no está disponible.")
-                lista.isEmpty() ->
-                    QuizUiState(cargando = false, tipo = tipo, titulo = titulo, bloqueadoMensaje = "Tu docente aún no agrega preguntas.")
-                tipo == TipoPregunta.PRUEBA && !Evaluador.puedeRendirPrueba(oa.intentosPrueba, usados) ->
-                    QuizUiState(
-                        cargando = false, tipo = tipo, titulo = titulo,
-                        bloqueadoMensaje = "Ya usaste los ${oa.intentosPrueba} intentos de la prueba final."
+    fun iniciarQuiz(oaId: Int, tipo: String) {
+
+        if (cargando.value) return
+
+        val titulo = if (tipo == TipoPregunta.PRUEBA)
+            "Prueba final"
+        else
+            "Desafíos"
+
+        _quiz.value = QuizUiState(
+            cargando = true,
+            tipo = tipo,
+            titulo = titulo
+        )
+
+        ejecutar {
+
+            try {
+
+                val oa = repository.buscarObjetivo(oaId)
+
+                val preguntas =
+                    repository.preguntasDe(oaId, tipo)
+
+                val historial = repository.respuestas()
+
+                val intentos = repository.consultarIntentos(
+                    oaId = oaId,
+                    tipo = tipo
+                )
+
+                _respuestas.value = historial
+
+                val ultimo = intentos.ultimoIntento
+
+                val anteriores = historial.filter {
+
+                    it.oaId == oaId &&
+                            it.tipo == tipo &&
+                            it.intento == ultimo
+
+                }.associateBy { it.preguntaId }
+
+                // Separa las preguntas respondidas de las pendientes.
+                val respondidas = preguntas.filter {
+                    anteriores.containsKey(it.id)
+                }
+
+                val pendientes = preguntas.filter {
+                    !anteriores.containsKey(it.id)
+                }
+
+                val reanudar =
+                    ultimo > 0 &&
+                            respondidas.isNotEmpty() &&
+                            pendientes.isNotEmpty() &&
+                            (
+                                    tipo != TipoPregunta.PRUEBA ||
+                                            ultimo <= oa.intentosPrueba
+                                    )
+
+                val bloqueado = when {
+
+                    !oa.asignado ->
+                        "Este objetivo no está disponible."
+
+                    preguntas.isEmpty() ->
+                        "Tu docente aún no agrega preguntas."
+
+                    tipo == TipoPregunta.PRUEBA &&
+                            !reanudar &&
+                            !intentos.disponible ->
+                        "Ya utilizaste los intentos permitidos."
+
+                    else -> null
+                }
+
+                if (bloqueado != null) {
+
+                    _quiz.value = QuizUiState(
+                        cargando = false,
+                        tipo = tipo,
+                        titulo = titulo,
+                        bloqueadoMensaje = bloqueado
                     )
-                else -> QuizUiState(
-                    cargando = false, tipo = tipo, titulo = titulo, preguntas = lista,
-                    intento = usados + 1, intentosPermitidos = oa.intentosPrueba
+
+                    return@ejecutar
+                }
+
+                // Recupera las respuestas de un intento incompleto.
+                val resultadosPrevios = if (reanudar) {
+
+                    respondidas.map { pregunta ->
+
+                        val respuesta =
+                            anteriores.getValue(pregunta.id)
+
+                        ResultadoPregunta(
+                            pregunta = pregunta.copy(
+                                correcta = if (
+                                    respuesta.esCorrecta
+                                ) respuesta.elegida else -1
+                            ),
+                            elegida = respuesta.elegida,
+                            correcta = respuesta.esCorrecta
+                        )
+                    }
+
+                } else {
+                    emptyList()
+                }
+
+                _quiz.value = QuizUiState(
+                    cargando = false,
+                    tipo = tipo,
+                    titulo = titulo,
+
+                    preguntas = if (reanudar)
+                        respondidas + pendientes
+                    else
+                        preguntas,
+
+                    indice = resultadosPrevios.size,
+
+                    resultados = resultadosPrevios,
+
+                    intento = if (reanudar)
+                        ultimo
+                    else
+                        ultimo + 1,
+
+                    intentosPermitidos = oa.intentosPrueba
+                )
+
+            } finally {
+
+                _quiz.update {
+                    it.copy(cargando = false)
+                }
+            }
+        }
+    }
+
+    // ---------- Registro de respuestas ----------
+
+    fun seleccionar(alternativa: Int) {
+
+        if (cargando.value || alternativa !in 0..2) return
+
+        _quiz.update {
+
+            if (it.respondida || it.terminado)
+                it
+            else
+                it.copy(seleccion = alternativa)
+        }
+    }
+
+    // Envía la alternativa y espera la corrección del servidor.
+    fun responder() {
+
+        if (cargando.value) return
+
+        val s = _quiz.value
+        val pregunta = s.preguntaActual ?: return
+
+        if (s.respondida ||
+            s.terminado ||
+            s.seleccion !in 0..2
+        ) return
+
+        ejecutar {
+
+            val respuesta = repository.registrarRespuesta(
+                preguntaId = pregunta.id,
+                intento = s.intento,
+                elegida = s.seleccion
+            )
+
+            val alternativaCorrecta =
+                respuesta.correcta
+                    ?: if (respuesta.esCorrecta)
+                        respuesta.elegida
+                    else
+                        -1
+
+            val preguntaCorregida = pregunta.copy(
+                correcta = alternativaCorrecta
+            )
+
+            val preguntasActualizadas =
+                s.preguntas.toMutableList()
+
+            preguntasActualizadas[s.indice] =
+                preguntaCorregida
+
+            // Actualiza el progreso con la respuesta persistida.
+            _respuestas.update { lista ->
+
+                lista.filterNot {
+                    it.id == respuesta.id
+                } + respuesta.aEntidad()
+            }
+
+            val resultado = ResultadoPregunta(
+                pregunta = preguntaCorregida,
+                elegida = respuesta.elegida,
+                correcta = respuesta.esCorrecta
+            )
+
+            val actualizado = s.copy(
+                preguntas = preguntasActualizadas,
+                resultados = s.resultados + resultado
+            )
+
+            // La prueba final muestra los resultados al terminar.
+            if (s.tipo == TipoPregunta.PRUEBA) {
+
+                avanzar(actualizado)
+
+            } else {
+
+                _quiz.value = actualizado.copy(
+                    respondida = true
                 )
             }
         }
     }
 
-    fun seleccionar(alternativa: Int) {
-        _quiz.update { if (it.respondida) it else it.copy(seleccion = alternativa) }
-    }
-
-    /** Corrige y guarda la respuesta. En la práctica muestra el resultado; en la prueba avanza directo. */
-    fun responder() {
-        val s = _quiz.value
-        val pregunta = s.preguntaActual ?: return
-        if (s.respondida || s.terminado || s.seleccion < 0) return
-
-        val correcta = Evaluador.esCorrecta(pregunta, s.seleccion)
-        viewModelScope.launch {
-            repository.guardarRespuesta(
-                RespuestaEntity(
-                    rutAlumno = rutActual.value, oaId = pregunta.oaId, preguntaId = pregunta.id,
-                    tipo = pregunta.tipo, dificultad = pregunta.dificultad, intento = s.intento,
-                    elegida = s.seleccion, esCorrecta = correcta, fecha = System.currentTimeMillis()
-                )
-            )
-        }
-        val conResultado = s.copy(resultados = s.resultados + ResultadoPregunta(pregunta, s.seleccion, correcta))
-        if (s.tipo == TipoPregunta.PRUEBA) avanzar(conResultado) else _quiz.value = conResultado.copy(respondida = true)
-    }
-
     fun siguiente() {
+
+        if (cargando.value) return
+
         val s = _quiz.value
-        if (s.respondida) avanzar(s)
+
+        if (s.respondida) {
+            avanzar(s)
+        }
     }
 
+    // Avanza a la siguiente pregunta o finaliza la evaluación.
     private fun avanzar(s: QuizUiState) {
-        _quiz.value = if (s.indice >= s.preguntas.lastIndex) {
-            s.copy(terminado = true, respondida = false, seleccion = -1)
+
+        _quiz.value = if (
+            s.indice >= s.preguntas.lastIndex
+        ) {
+
+            s.copy(
+                terminado = true,
+                respondida = false,
+                seleccion = -1
+            )
+
         } else {
-            s.copy(indice = s.indice + 1, seleccion = -1, respondida = false)
+
+            s.copy(
+                indice = s.indice + 1,
+                seleccion = -1,
+                respondida = false
+            )
         }
     }
 }
