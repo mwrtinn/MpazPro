@@ -53,12 +53,17 @@ object RetrofitClient {
         crearRetrofit(URL_USUARIOS)
     }
 
-    internal val retrofitAprendizaje by lazy {
+    private val retrofitAprendizaje by lazy {
         crearRetrofit(URL_APRENDIZAJE)
     }
 
-    // Servicio remoto de autenticación.
+    // Servicio remoto de usuarios.
     val usuarios: UsuariosApi by lazy {
         retrofitUsuarios.create(UsuariosApi::class.java)
+    }
+
+    // Servicio remoto de currículo y seguimiento.
+    val aprendizaje: AprendizajeApi by lazy {
+        retrofitAprendizaje.create(AprendizajeApi::class.java)
     }
 }
