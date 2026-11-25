@@ -32,6 +32,15 @@ val permitirHttpRelease = propiedadesLocales.getProperty(
     "false"
 ).toBoolean()
 
+// Recupera las credenciales privadas de firma.
+val archivoFirma = rootProject.file("keystore.properties")
+
+val propiedadesFirma = Properties().apply {
+    if (archivoFirma.exists()) {
+        archivoFirma.inputStream().use { load(it) }
+    }
+}
+
 android {
     namespace = "cl.duoc.mpazpro"
     compileSdk = 34
@@ -62,6 +71,20 @@ android {
         manifestPlaceholders["mpazCleartext"] = "false"
     }
 
+    // Configuración de firma de la versión release.
+    signingConfigs {
+        if (archivoFirma.exists()) {
+            create("release") {
+                storeFile = rootProject.file(
+                    propiedadesFirma.getProperty("storeFile")
+                )
+                storePassword = propiedadesFirma.getProperty("storePassword")
+                keyAlias = propiedadesFirma.getProperty("keyAlias")
+                keyPassword = propiedadesFirma.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
 
         // Permite HTTP durante las pruebas locales.
@@ -71,6 +94,9 @@ android {
 
         release {
             isMinifyEnabled = false
+
+            // Utiliza la firma privada cuando está configurada.
+            signingConfig = signingConfigs.findByName("release")
 
             // HTTPS por defecto en la versión de entrega.
             manifestPlaceholders["mpazCleartext"] =
