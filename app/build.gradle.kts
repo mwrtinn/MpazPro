@@ -37,7 +37,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "cl.duoc.mpazpro"
+        applicationId = "cl.mwrtinn.mpazpro"
         minSdk = 28
         targetSdk = 34
         versionCode = 1
