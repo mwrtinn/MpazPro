@@ -19,3 +19,12 @@ local.properties
 
 # Archivos temporales de Kotlin
 .kotlin/
+
+# Archivos generados de release
+/app/release/
+
+# Archivos privados de firma
+*.jks
+*.keystore
+keystore.properties
+key.properties
