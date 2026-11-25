@@ -1,10 +1,9 @@
-
 # MPAZ PRO 3.º - Escuela Escritora Marcela Paz
 
 Proyecto de Desarrollo de Aplicaciones Móviles (DSY1105).
 
 **Duoc UC - Sede San Bernardo**  
-Evaluación Final Transversal (EFT).
+Evaluación Parcial 4 — Avance hacia la Evaluación Final Transversal (EFT).
 
 ## Descripción del proyecto
 
@@ -319,7 +318,26 @@ La cobertura corresponde al conjunto de clases de lógica seleccionado para las 
 .\gradlew.bat assembleRelease
 ```
 
-La generación del APK firmado requiere configurar la llave privada de firma correspondiente.
+La generación del APK firmado requiere configurar la llave privada de firma correspondiente. El bloque `signingConfigs` de `app/build.gradle.kts` lee el archivo privado `keystore.properties`, ubicado en la raíz del proyecto.
+
+Ejemplo de configuración (sin credenciales reales):
+
+```properties
+storeFile=C:/ruta/privada/mpazpro-release.jks
+storePassword=CONTRASENA_DEL_ALMACEN
+keyAlias=mpazpro
+keyPassword=CONTRASENA_DE_LA_LLAVE
+```
+
+El archivo `keystore.properties` y la llave `.jks` se mantienen fuera del repositorio público. Sin esa configuración, Gradle puede generar un release sin firmar. Con la configuración válida, `assembleRelease` genera el APK firmado en `app/build/outputs/apk/release/app-release.apk`. La llave y las credenciales necesarias para reproducir la firma deben gestionarse por un canal privado autorizado por el docente.
+
+Para generar el reporte de cobertura lógica:
+
+```powershell
+.\gradlew.bat jacocoDebugReport
+```
+
+El informe HTML se genera en `app/build/reports/jacoco/logica/index.html`.
 
 ## Firma digital y registro Android
 
@@ -379,7 +397,7 @@ Ramas principales del desarrollo:
 
 Se utilizan commits descriptivos para conservar la trazabilidad del desarrollo.
 
-La planificación se organiza mediante Trello.
+Las tareas de desarrollo y cierre se consolidan retrospectivamente mediante Trello.
 
 ## Estado del proyecto
 
@@ -422,3 +440,112 @@ Los informes pedagógicos describen el rendimiento registrado. No constituyen di
 Proyecto desarrollado para la asignatura Desarrollo de Aplicaciones Móviles de Duoc UC.
 
 Todos los usuarios, respuestas, evaluaciones y resultados utilizados en la demostración son ficticios.
+
+
+## Endpoints REST utilizados
+
+### Microservicio Usuarios
+
+URL base: https://mpaz-usuarios-service.onrender.com/
+
+| Método | Endpoint | Función |
+|---|---|---|
+| POST | /api/auth/login | Autenticación |
+| GET | /api/usuarios | Listar usuarios |
+| GET | /api/usuarios/{rut} | Consultar usuario |
+| POST | /api/usuarios | Crear usuario |
+| PUT | /api/usuarios/{rut} | Actualizar usuario |
+| DELETE | /api/usuarios/{rut} | Eliminar usuario |
+
+### Microservicio Aprendizaje
+
+URL base: https://mpaz-aprendizaje-service.onrender.com/
+
+| Método | Endpoint | Función |
+|---|---|---|
+| GET | /api/objetivos | Listar objetivos |
+| GET | /api/objetivos/{id} | Consultar objetivo |
+| POST | /api/objetivos | Crear objetivo |
+| PUT | /api/objetivos/{id} | Actualizar objetivo |
+| DELETE | /api/objetivos/{id} | Eliminar objetivo |
+| GET | /api/contenidos | Listar contenidos |
+| GET | /api/contenidos/{id} | Consultar contenido |
+| POST | /api/contenidos | Crear contenido |
+| PUT | /api/contenidos/{id} | Actualizar contenido |
+| PATCH | /api/contenidos/{id}/estado | Aprobar o rechazar contenido |
+| DELETE | /api/contenidos/{id} | Eliminar contenido |
+| GET | /api/preguntas | Listar preguntas |
+| GET | /api/preguntas/{id} | Consultar pregunta |
+| POST | /api/preguntas | Crear pregunta |
+| PUT | /api/preguntas/{id} | Actualizar pregunta |
+| DELETE | /api/preguntas/{id} | Eliminar pregunta |
+| GET | /api/respuestas | Consultar respuestas |
+| GET | /api/respuestas/alumno/{rut} | Consultar respuestas del estudiante |
+| POST | /api/respuestas | Registrar respuesta |
+| GET | /api/intentos | Consultar intentos |
+| GET | /api/informes | Listar informes |
+| GET | /api/informes/{clave} | Consultar informe |
+| PUT | /api/informes/{clave} | Guardar informe |
+| PATCH | /api/informes/{clave}/validar | Validar informe pedagógico |
+
+### API externa iNaturalist
+
+URL base: https://api.inaturalist.org/
+
+| Método | Endpoint | Función |
+|---|---|---|
+| GET | /v1/taxa/{ids} | Consultar información de especies |
+
+La API externa se integra mediante Retrofit en el minijuego Exploradores de Chile.
+
+Los endpoints de los microservicios están sujetos a las reglas de autenticación y autorización correspondientes.
+
+La tabla documenta las 31 declaraciones de endpoints de las interfaces Retrofit; no constituye por sí sola evidencia de ejecución de todos los flujos CRUD desde la interfaz. Las interfaces Retrofit se encuentran en:
+
+- data/remote/UsuariosApi.kt
+- data/remote/AprendizajeApi.kt
+- data/remote/NaturalezaApi.kt
+
+## Evidencia de planificación
+
+Tablero Trello:
+
+https://trello.com/b/xgpMd18n/mpaz-pro-3-desarrollo-de-aplicaciones-moviles
+
+El tablero consolida retrospectivamente las tareas realizadas durante el desarrollo y las actividades de cierre.
+
+## Descarga del APK firmado
+
+https://github.com/mwrtinn/MpazPro/releases/tag/v1.0.0
+
+El certificado de firma fue verificado mediante `apksigner` y registrado en Android Developer Console. El APK generado mediante Gradle fue verificado con el esquema de firma v2, un firmante RSA de 2048 bits y el identificador `cl.mwrtinn.mpazpro` (versionName 1.0, versionCode 1).
+
+La configuración técnica de firma se encuentra en app/build.gradle.kts. Las credenciales privadas se mantienen fuera del repositorio público.
+
+## Evidencias de firma y planificación
+
+### Compilación release mediante Gradle
+
+![Compilación exitosa del APK release](docs/evidencias/compilacion-release.png)
+
+### Verificación del APK firmado
+
+![Verificación de firma y nombre de paquete mediante apksigner y aapt](docs/evidencias/apk-firmado.png)
+
+### Comprobación de la llave de firma
+
+La comprobación local confirma la existencia del archivo `.jks` y que Git ignora el archivo privado de configuración. No se muestran contraseñas.
+
+![Comprobación de existencia del archivo JKS](docs/evidencias/llave-jks.png)
+
+### Registro del paquete Android
+
+![Paquete registrado y certificado verificado](docs/evidencias/registro-android.png)
+
+### GitHub Releases
+
+![Publicación de la versión 1.0](docs/evidencias/github-release.png)
+
+### Tablero Trello
+
+![Registro retrospectivo de tareas realizadas](docs/evidencias/trello.png)
